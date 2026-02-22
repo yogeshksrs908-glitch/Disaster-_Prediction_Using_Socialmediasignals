@@ -1,0 +1,8 @@
+praw
+flask
+flask-cors
+numpy
+pandas
+python-dotenv
+geopy
+gunicorn

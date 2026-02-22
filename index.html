@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>AI Disaster Prediction — Command Console</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#0dccf2",
+            "background-light": "#f5f8f8",
+            "background-dark": "#101f22",
+            "surface-dark": "#1b282b",
+            "surface-darker": "#151e20",
+            "alert-critical": "#ef4444",
+            "alert-warning": "#eab308",
+            "alert-success": "#10b981",
+            "grid-line": "rgba(255, 255, 255, 0.1)"
+          },
+          fontFamily: {
+            "display": ["Public Sans", "sans-serif"],
+            "mono": ["Noto Sans Mono", "monospace"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.125rem",
+            "sm": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    /* ==================== DARK MODE SCROLLBAR ==================== */
+    .dark ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    .dark ::-webkit-scrollbar-track {
+      background: #101f22;
+    }
+
+    .dark ::-webkit-scrollbar-thumb {
+      background: #2d454a;
+      border-radius: 2px;
+    }
+
+    .dark ::-webkit-scrollbar-thumb:hover {
+      background: #0dccf2;
+    }
+
+    /* ==================== LIGHT MODE SCROLLBAR ==================== */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #e5e7eb;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #9ca3af;
+      border-radius: 2px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #0dccf2;
+    }
+
+    /* ==================== GRID BACKGROUNDS ==================== */
+    .dark .grid-bg {
+      background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+
+    .grid-bg {
+      background-image: linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+
+    /* ==================== MAP ==================== */
+    #map {
+      height: 100%;
+      width: 100%;
+    }
+
+    .dark .leaflet-container {
+      background: #101f22;
+    }
+
+    .leaflet-container {
+      background: #e5e7eb;
+    }
+
+    /* ==================== LIGHT MODE OVERRIDES ==================== */
+    /* Header */
+    html:not(.dark) header {
+      background: #ffffff;
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    html:not(.dark) header h1,
+    html:not(.dark) header .text-white {
+      color: #1f2937;
+    }
+
+    html:not(.dark) header .text-white\/50,
+    html:not(.dark) header .text-white\/40 {
+      color: #6b7280;
+    }
+
+    html:not(.dark) header select {
+      background: #f3f4f6;
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #1f2937;
+    }
+
+    /* Main area */
+    html:not(.dark) main {
+      background: #f3f4f6;
+    }
+
+    html:not(.dark) .from-surface-darker\/90 {
+      --tw-gradient-from: rgba(243, 244, 246, 0.95);
+    }
+
+    html:not(.dark) main h2 {
+      color: #1f2937;
+    }
+
+    html:not(.dark) main .text-white\/60 {
+      color: #6b7280;
+    }
+
+    html:not(.dark) main button {
+      background: #ffffff;
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #1f2937;
+    }
+
+    /* Legend */
+    html:not(.dark) .absolute.bottom-6.left-6 {
+      background: rgba(255, 255, 255, 0.95);
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #1f2937;
+    }
+
+    html:not(.dark) .absolute.bottom-6.left-6 .text-white\/40 {
+      color: #6b7280;
+    }
+
+    /* Sidebar */
+    html:not(.dark) aside {
+      background: #ffffff;
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    html:not(.dark) aside .text-white\/50,
+    html:not(.dark) aside .text-white\/40 {
+      color: #6b7280;
+    }
+
+    html:not(.dark) aside .text-white,
+    html:not(.dark) aside .text-white\/90,
+    html:not(.dark) aside .text-white\/70 {
+      color: #1f2937;
+    }
+
+    html:not(.dark) aside .text-white\/60 {
+      color: #4b5563;
+    }
+
+    html:not(.dark) aside .bg-surface-dark,
+    html:not(.dark) aside .bg-surface-darker {
+      background: #f9fafb;
+    }
+
+    html:not(.dark) aside .border-white\/5,
+    html:not(.dark) aside .border-white\/10 {
+      border-color: rgba(0, 0, 0, 0.05);
+    }
+
+    /* Charts area */
+    html:not(.dark) .bg-surface-darker.border {
+      background: #f3f4f6;
+      border-color: rgba(0, 0, 0, 0.05);
+    }
+
+    /* Feed/Signal log */
+    html:not(.dark) #feed .text-white\/30 {
+      color: #9ca3af;
+    }
+
+    html:not(.dark) #feed .group:hover {
+      background: rgba(0, 0, 0, 0.02);
+    }
+
+    /* Body background */
+    html:not(.dark) body {
+      background: #f5f8f8;
+      color: #1f2937;
+    }
+
+    @keyframes fadeInPost {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fadeIn {
+      animation: fadeInPost 0.4s ease forwards;
+    }
+
+    .ring-progress {
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+      transition: stroke-dashoffset 900ms cubic-bezier(.2, .8, .2, 1);
+    }
+  </style>
+</head>
+
+<body
+  class="bg-background-light dark:bg-background-dark font-display text-white min-h-screen lg:h-screen lg:overflow-hidden flex flex-col">
+
+  <!-- Top Navigation / Command Header -->
+  <header
+    class="flex-none z-50 border-b border-white/10 bg-surface-darker px-4 py-3 md:py-2 flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-0">
+    <div class="flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
+      <div class="flex items-center gap-3 text-primary">
+        <span class="material-symbols-outlined text-3xl">radar</span>
+        <div class="flex flex-col">
+          <h1 class="text-sm font-bold tracking-[0.1em] leading-none">AI DISASTER PREDICTION</h1>
+          <span class="text-[10px] text-white/50 tracking-[0.2em] font-mono">COMMAND // SDG CLIMATE ACTION</span>
+        </div>
+      </div>
+      <div class="hidden md:block h-8 w-px bg-white/10"></div>
+
+      <!-- Controls -->
+      <div class="flex flex-wrap items-center gap-2 md:gap-3">
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] text-white/40 font-mono hidden md:inline">ISSUE:</span>
+          <select id="keyword"
+            class="bg-surface-dark border border-white/10 rounded-sm px-3 py-1.5 text-xs font-mono text-white focus:border-primary focus:ring-0 w-full md:w-auto min-w-[120px]">
+            <option value="flood">FLOOD</option>
+            <option value="wildfire">WILDFIRE</option>
+            <option value="earthquake">EARTHQUAKE</option>
+            <option value="cyclone">CYCLONE</option>
+            <option value="landslide">LANDSLIDE</option>
+            <option value="drought">DROUGHT</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] text-white/40 font-mono hidden md:inline">REGION:</span>
+          <select id="region"
+            class="bg-surface-dark border border-white/10 rounded-sm px-3 py-1.5 text-xs font-mono text-white focus:border-primary focus:ring-0 w-full md:w-auto min-w-[140px]">
+            <option value="any">GLOBAL</option>
+            <option value="india">INDIA</option>
+            <option value="usa">USA</option>
+            <option value="indonesia">INDONESIA</option>
+            <option value="australia">AUSTRALIA</option>
+            <option value="japan">JAPAN</option>
+            <option value="brazil">BRAZIL</option>
+            <option value="uk">UNITED KINGDOM</option>
+            <option value="germany">GERMANY</option>
+            <option value="france">FRANCE</option>
+            <option value="italy">ITALY</option>
+            <option value="spain">SPAIN</option>
+            <option value="canada">CANADA</option>
+            <option value="china">CHINA</option>
+            <option value="southafrica">SOUTH AFRICA</option>
+            <option value="mexico">MEXICO</option>
+            <option value="russia">RUSSIA</option>
+            <option value="argentina">ARGENTINA</option>
+            <option value="newzealand">NEW ZEALAND</option>
+            <option value="singapore">SINGAPORE</option>
+          </select>
+        </div>
+        <button id="simulateBtn"
+          class="bg-primary/20 hover:bg-primary/30 border border-primary/40 text-primary px-4 py-1.5 text-xs font-bold tracking-wider flex items-center gap-2 transition-all rounded-sm flex-1 md:flex-none justify-center">
+          <span class="material-symbols-outlined text-sm">play_arrow</span> ANALYZE
+        </button>
+        <button id="clearBtn"
+          class="bg-surface-dark border border-white/10 hover:border-alert-critical/50 text-white/60 hover:text-alert-critical px-3 py-1.5 text-xs font-bold tracking-wider flex items-center gap-2 transition-all rounded-sm flex-1 md:flex-none justify-center">
+          <span class="material-symbols-outlined text-sm">delete</span> CLEAR
+        </button>
+      </div>
+    </div>
+
+    <div
+      class="flex items-center gap-4 justify-between md:justify-end border-t border-white/5 pt-2 md:pt-0 md:border-0">
+      <button id="exportBtn"
+        class="flex bg-surface-dark border border-white/10 hover:border-primary/50 text-white px-3 py-1.5 text-xs font-bold tracking-wide items-center gap-2 transition-all rounded-sm">
+        <span class="material-symbols-outlined text-sm">download</span> EXPORT
+      </button>
+      <div class="flex items-center gap-2 text-[10px] uppercase tracking-wider text-white/40 md:hidden">System Status:
+        Online</div>
+      <div class="flex items-center gap-4">
+        <button id="theme-toggle"
+          class="p-2 hover:bg-white/5 rounded-sm text-white/70 hover:text-primary transition-colors">
+          <span class="material-symbols-outlined text-xl">dark_mode</span>
+        </button>
+        <div
+          class="h-8 w-8 bg-surface-dark border border-white/20 rounded-sm flex items-center justify-center text-xs font-bold text-primary">
+          AI
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <div class="flex flex-1 flex-col lg:flex-row lg:overflow-hidden relative">
+
+    <!-- Left: Map Viewport -->
+    <main class="h-[50vh] lg:h-auto lg:flex-1 relative bg-surface-darker grid-bg flex flex-col">
+      <!-- Map Header Overlay -->
+      <div
+        class="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-surface-darker/90 to-transparent p-4 flex justify-between items-start pointer-events-none">
+        <div class="pointer-events-auto">
+          <h2 id="sectorTitle" class="text-2xl font-bold tracking-tight text-white mb-1 flex items-center gap-2">
+            SECTOR: GLOBAL MONITORING
+            <span id="statusBadge"
+              class="px-2 py-0.5 bg-primary/20 text-primary text-[10px] font-bold tracking-wider rounded-sm border border-primary/30">STANDBY</span>
+          </h2>
+          <div class="flex gap-4 text-xs font-mono text-white/60">
+            <span id="coordsDisplay" class="flex items-center gap-1"><span
+                class="material-symbols-outlined text-sm">my_location</span> LAT: --, LONG: --</span>
+            <span id="updateTimer" class="flex items-center gap-1"><span
+                class="material-symbols-outlined text-sm">schedule</span> LAST UPDATE: --</span>
+          </div>
+        </div>
+        <div class="flex gap-2 pointer-events-auto">
+          <button id="tipsBtn"
+            class="bg-surface-dark border border-white/10 hover:border-primary/50 text-white px-3 py-1.5 text-xs font-bold tracking-wide flex items-center gap-2 transition-all rounded-sm">
+            <span class="material-symbols-outlined text-sm">lightbulb</span> TIPS
+          </button>
+        </div>
+      </div>
+
+      <!-- The Map -->
+      <div id="map" class="absolute inset-0 z-0"></div>
+
+      <!-- Map Overlay Gradient -->
+      <div
+        class="absolute inset-0 z-0 bg-gradient-to-t from-surface-darker/50 via-transparent to-transparent pointer-events-none">
+      </div>
+
+      <!-- Map Controls (Zoom) -->
+      <div class="absolute bottom-6 right-6 z-10 flex flex-col gap-1">
+        <button onclick="map.zoomIn()"
+          class="w-8 h-8 bg-surface-dark border border-white/10 flex items-center justify-center hover:bg-white/10 text-white rounded-sm">
+          <span class="material-symbols-outlined text-lg">add</span>
+        </button>
+        <button onclick="map.zoomOut()"
+          class="w-8 h-8 bg-surface-dark border border-white/10 flex items-center justify-center hover:bg-white/10 text-white rounded-sm">
+          <span class="material-symbols-outlined text-lg">remove</span>
+        </button>
+      </div>
+
+      <!-- Legend -->
+      <div class="absolute bottom-6 left-6 z-10 bg-surface-dark/90 backdrop-blur border border-white/10 p-3 rounded-sm">
+        <div class="text-[10px] font-mono text-white/40 mb-2">SEVERITY LEGEND</div>
+        <div class="flex flex-col gap-1.5 text-[11px]">
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-alert-critical"></span> HIGH RISK
+          </div>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-alert-warning"></span> MODERATE
+          </div>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-alert-success"></span> LOW RISK
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Right: Intelligence Sidebar -->
+    <aside
+      class="w-full lg:w-[400px] h-auto flex-none bg-surface-dark border-t lg:border-t-0 lg:border-l border-white/10 flex flex-col z-20 shadow-2xl overflow-hidden">
+
+      <!-- Section 1: Risk Assessment -->
+      <div class="p-5 border-b border-white/5 flex-none">
+        <div class="flex items-start justify-between mb-4">
+          <h3 class="text-xs font-bold text-white/50 tracking-wider">AGGREGATE RISK ASSESSMENT</h3>
+        </div>
+        <div class="flex items-center gap-6">
+          <!-- Risk Ring -->
+          <div class="relative w-20 h-20 flex-none">
+            <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+              <defs>
+                <linearGradient id="riskGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#0dccf2" />
+                  <stop offset="100%" stop-color="#ef4444" />
+                </linearGradient>
+              </defs>
+              <path class="text-white/10"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none"
+                stroke="currentColor" stroke-width="3"></path>
+              <path id="riskRing" class="ring-progress"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none"
+                stroke="url(#riskGradient)" stroke-dasharray="0, 100" stroke-width="3"></path>
+            </svg>
+            <div class="absolute inset-0 flex items-center justify-center flex-col">
+              <span id="alertValue" class="text-xl font-bold text-white">0%</span>
+            </div>
+          </div>
+          <!-- Stats -->
+          <div class="flex flex-col gap-2 flex-1">
+            <div class="flex justify-between items-end border-b border-white/10 pb-1">
+              <span class="text-xs text-white/60">NEGATIVE</span>
+              <span id="negCount" class="text-sm font-bold text-alert-critical tracking-wide">0</span>
+            </div>
+            <div class="flex justify-between items-end border-b border-white/10 pb-1">
+              <span class="text-xs text-white/60">NEUTRAL</span>
+              <span id="neuCount" class="text-sm font-bold text-white/70 tracking-wide">0</span>
+            </div>
+            <div class="flex justify-between items-end">
+              <span class="text-xs text-white/60">POSITIVE</span>
+              <span id="posCount" class="text-sm font-bold text-alert-success tracking-wide">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Trend Charts -->
+      <div class="p-5 border-b border-white/5 flex-none">
+        <h3 class="text-xs font-bold text-white/50 tracking-wider mb-4">PREDICTIVE METRICS</h3>
+        <div class="grid grid-cols-2 gap-3">
+          <!-- Trend Chart -->
+          <div class="flex flex-col gap-1">
+            <div class="text-[10px] font-mono text-white/40 mb-1">RISK TREND</div>
+            <div class="h-20 w-full bg-surface-darker border border-white/5 rounded-sm p-2">
+              <canvas id="trendChart"></canvas>
+            </div>
+          </div>
+          <!-- Sentiment Chart -->
+          <div class="flex flex-col gap-1">
+            <div class="text-[10px] font-mono text-white/40 mb-1">SENTIMENT</div>
+            <div class="h-20 w-full bg-surface-darker border border-white/5 rounded-sm p-2">
+              <canvas id="sentChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Signal Log / News Feed -->
+      <div
+        class="flex-1 bg-surface-darker border-t border-white/10 flex flex-col min-h-[400px] lg:min-h-0 overflow-hidden">
+        <div class="p-3 bg-surface-dark border-b border-white/5 flex justify-between items-center flex-none">
+          <h3 class="text-xs font-bold text-white/50 tracking-wider">SIGNAL LOG</h3>
+          <div class="flex gap-2">
+            <span class="w-2 h-2 rounded-full bg-alert-critical" title="Critical"></span>
+            <span class="w-2 h-2 rounded-full bg-alert-warning" title="Warning"></span>
+            <span class="w-2 h-2 rounded-full bg-alert-success" title="Normal"></span>
+          </div>
+        </div>
+        <div id="feed" class="flex-1 overflow-y-auto">
+          <!-- Posts will be rendered here -->
+          <div class="p-6 text-center text-white/30 text-xs font-mono">
+            <span class="material-symbols-outlined text-3xl mb-2 block">signal_cellular_alt</span>
+            SELECT PARAMETERS AND CLICK ANALYZE TO BEGIN MONITORING
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Action -->
+      <div class="p-4 border-t border-white/10 bg-surface-darker flex-none">
+        <button id="generateReportBtn"
+          class="w-full bg-primary/20 hover:bg-primary/30 border border-primary/40 text-primary py-2 px-4 text-xs font-bold tracking-widest uppercase transition-colors flex items-center justify-center gap-2 rounded-sm group">
+          <span class="material-symbols-outlined text-sm">assessment</span>
+          Generate Intelligence Report
+        </button>
+      </div>
+    </aside>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+  <script>
+    // ==================== ELEMENTS ====================
+    const simulateBtn = document.getElementById('simulateBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const tipsBtn = document.getElementById('tipsBtn');
+    const generateReportBtn = document.getElementById('generateReportBtn');
+
+    const alertEl = document.getElementById('alertValue');
+    const riskRing = document.getElementById('riskRing');
+    const negCount = document.getElementById('negCount');
+    const neuCount = document.getElementById('neuCount');
+    const posCount = document.getElementById('posCount');
+    const feedEl = document.getElementById('feed');
+    const sectorTitle = document.getElementById('sectorTitle');
+    const statusBadge = document.getElementById('statusBadge');
+    const coordsDisplay = document.getElementById('coordsDisplay');
+    const updateTimer = document.getElementById('updateTimer');
+
+    // ==================== CHARTS ====================
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    const sentCtx = document.getElementById('sentChart').getContext('2d');
+
+    const trendChart = new Chart(trendCtx, {
+      type: 'line',
+      data: { labels: [], datasets: [{ label: 'Risk', data: [], borderColor: '#0dccf2', backgroundColor: 'rgba(13,204,242,0.1)', tension: 0.3, fill: true, pointRadius: 0 }] },
+      options: {
+        scales: {
+          y: { beginAtZero: true, max: 100, display: false },
+          x: { display: false }
+        },
+        plugins: { legend: { display: false } },
+        maintainAspectRatio: false
+      }
+    });
+
+    const sentChart = new Chart(sentCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Negative', 'Neutral', 'Positive'],
+        datasets: [{ data: [0, 0, 0], backgroundColor: ['#ef4444', '#6b7280', '#10b981'], borderWidth: 0 }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        maintainAspectRatio: false,
+        cutout: '60%'
+      }
+    });
+
+    // ==================== MAP ====================
+    const map = L.map('map', { zoomControl: false }).setView([20.6, 78.9], 3);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 18,
+      attribution: ''
+    }).addTo(map);
+
+    let markers = [];
+    function clearMarkers() { markers.forEach(m => map.removeLayer(m)); markers = []; }
+
+    // ==================== REGION BOUNDS ====================
+    const regionBounds = {
+      "india": { lat: [8, 35], lon: [68, 97], name: "INDIA", center: [22, 82] },
+      "usa": { lat: [25, 49], lon: [-125, -67], name: "USA", center: [39, -98] },
+      "indonesia": { lat: [-11, 6], lon: [95, 141], name: "INDONESIA", center: [-2, 118] },
+      "australia": { lat: [-44, -10], lon: [112, 154], name: "AUSTRALIA", center: [-25, 134] },
+      "japan": { lat: [24, 46], lon: [123, 146], name: "JAPAN", center: [36, 138] },
+      "brazil": { lat: [-34, 5], lon: [-74, -32], name: "BRAZIL", center: [-14, -51] },
+      "uk": { lat: [49, 61], lon: [-11, 2], name: "UNITED KINGDOM", center: [54, -2] },
+      "germany": { lat: [47, 55], lon: [5, 15], name: "GERMANY", center: [51, 10] },
+      "france": { lat: [41, 51], lon: [-5, 10], name: "FRANCE", center: [46, 2] },
+      "italy": { lat: [36, 47], lon: [6, 19], name: "ITALY", center: [42, 12] },
+      "spain": { lat: [36, 44], lon: [-10, 5], name: "SPAIN", center: [40, -4] },
+      "canada": { lat: [42, 70], lon: [-141, -52], name: "CANADA", center: [56, -106] },
+      "china": { lat: [18, 54], lon: [73, 135], name: "CHINA", center: [35, 105] },
+      "southafrica": { lat: [-35, -22], lon: [16, 33], name: "SOUTH AFRICA", center: [-29, 24] },
+      "mexico": { lat: [14, 33], lon: [-118, -86], name: "MEXICO", center: [23, -102] },
+      "russia": { lat: [41, 82], lon: [19, 180], name: "RUSSIA", center: [61, 105] },
+      "argentina": { lat: [-55, -21], lon: [-74, -53], name: "ARGENTINA", center: [-38, -63] },
+      "newzealand": { lat: [-47, -34], lon: [166, 179], name: "NEW ZEALAND", center: [-41, 174] },
+      "singapore": { lat: [1.15, 1.47], lon: [103.6, 104.1], name: "SINGAPORE", center: [1.35, 103.8] },
+      "any": { lat: [-60, 70], lon: [-180, 180], name: "GLOBAL", center: [20, 0] }
+    };
+
+    function randomBetween(min, max) { return Math.random() * (max - min) + min; }
+
+    function randomLatLonIn(region) {
+      const bounds = regionBounds[region.toLowerCase()] || regionBounds["any"];
+      return [randomBetween(bounds.lat[0], bounds.lat[1]), randomBetween(bounds.lon[0], bounds.lon[1])];
+    }
+
+    // ==================== DEMO POSTS ====================
+    function generateDemoPosts(n = 8, keyword = 'flood', region = 'any') {
+      const types = ['Flood', 'Wildfire', 'Landslide', 'Cyclone', 'Earthquake', 'Drought'];
+      const posts = [];
+      for (let i = 0; i < n; i++) {
+        const type = types[Math.floor(Math.random() * types.length)];
+        const latlon = randomLatLonIn(region);
+        const severity = +(Math.min(4, Math.random() * 3 + (type === 'Earthquake' ? 1.2 : 0))).toFixed(2);
+        const text = `${keyword.toUpperCase()} ${type} reported — severity: ${Math.round(severity * 25)}%`;
+        posts.push({ text, lat: latlon[0], lon: latlon[1], timestamp: Date.now() - i * 60000, severity });
+      }
+      return posts;
+    }
+
+    // ==================== UPDATE INDICATOR ====================
+    function updateIndicator(value) {
+      const pct = Math.max(0, Math.min(100, Math.round(value)));
+      alertEl.textContent = pct + '%';
+      riskRing.setAttribute('stroke-dasharray', `${pct}, 100`);
+
+      // Update status badge
+      if (pct >= 70) {
+        statusBadge.className = 'px-2 py-0.5 bg-alert-critical/20 text-alert-critical text-[10px] font-bold tracking-wider rounded-sm border border-alert-critical/30';
+        statusBadge.textContent = 'CRITICAL';
+      } else if (pct >= 40) {
+        statusBadge.className = 'px-2 py-0.5 bg-alert-warning/20 text-alert-warning text-[10px] font-bold tracking-wider rounded-sm border border-alert-warning/30';
+        statusBadge.textContent = 'ELEVATED';
+      } else if (pct > 0) {
+        statusBadge.className = 'px-2 py-0.5 bg-alert-success/20 text-alert-success text-[10px] font-bold tracking-wider rounded-sm border border-alert-success/30';
+        statusBadge.textContent = 'MONITORING';
+      } else {
+        statusBadge.className = 'px-2 py-0.5 bg-primary/20 text-primary text-[10px] font-bold tracking-wider rounded-sm border border-primary/30';
+        statusBadge.textContent = 'STANDBY';
+      }
+    }
+
+    // ==================== FILTER POSTS ====================
+    function filterPostsByRegionAndKeyword(posts, keyword, region) {
+      const regionTerms = {
+        "india": ["india", "indian", "delhi", "mumbai", "chennai", "bangalore", "kolkata"],
+        "usa": ["usa", "united states", "america", "american", "california", "texas", "florida", "new york"],
+        "indonesia": ["indonesia", "indonesian", "jakarta", "java", "sumatra", "bali"],
+        "australia": ["australia", "australian", "sydney", "melbourne", "queensland", "victoria"],
+        "japan": ["japan", "japanese", "tokyo", "osaka", "kyoto", "hokkaido"],
+        "brazil": ["brazil", "brazilian", "são paulo", "rio", "amazon", "brasilia"],
+        "uk": ["uk", "united kingdom", "britain", "british", "england", "london", "scotland", "wales"],
+        "germany": ["germany", "german", "berlin", "munich", "frankfurt", "hamburg"],
+        "france": ["france", "french", "paris", "lyon", "marseille"],
+        "italy": ["italy", "italian", "rome", "milan", "venice", "naples"],
+        "spain": ["spain", "spanish", "madrid", "barcelona", "valencia"],
+        "canada": ["canada", "canadian", "toronto", "vancouver", "ontario", "quebec"],
+        "china": ["china", "chinese", "beijing", "shanghai", "guangzhou", "shenzhen"],
+        "southafrica": ["south africa", "african", "johannesburg", "cape town", "pretoria"],
+        "mexico": ["mexico", "mexican", "mexico city", "cancun", "guadalajara"],
+        "russia": ["russia", "russian", "moscow", "st. petersburg", "siberia"],
+        "argentina": ["argentina", "argentine", "buenos aires"],
+        "newzealand": ["new zealand", "kiwi", "auckland", "wellington"],
+        "singapore": ["singapore", "singaporean"]
+      };
+
+      if (region.toLowerCase() === 'any') return posts;
+
+      const searchTerms = regionTerms[region.toLowerCase()] || [region.toLowerCase()];
+      const keywordLower = keyword.toLowerCase();
+
+      const filtered = posts.filter(p => {
+        const textLower = p.text.toLowerCase();
+        const hasRegion = searchTerms.some(term => textLower.includes(term));
+        const hasKeyword = textLower.includes(keywordLower);
+        return hasKeyword || hasRegion;
+      });
+
+      filtered.sort((a, b) => {
+        const aText = a.text.toLowerCase();
+        const bText = b.text.toLowerCase();
+        const aScore = (searchTerms.some(t => aText.includes(t)) ? 2 : 0) + (aText.includes(keywordLower) ? 1 : 0);
+        const bScore = (searchTerms.some(t => bText.includes(t)) ? 2 : 0) + (bText.includes(keywordLower) ? 1 : 0);
+        return bScore - aScore;
+      });
+
+      return filtered;
+    }
+
+    // ==================== RENDER POSTS ====================
+    function render(posts) {
+      let neg = 0, neu = 0, pos = 0, scoreSum = 0;
+      feedEl.innerHTML = '';
+
+      posts.forEach((p, idx) => {
+        const severity = p.severity;
+        let levelClass, levelText, borderClass;
+
+        if (severity > 2) {
+          levelClass = 'text-alert-critical';
+          levelText = 'CRIT';
+          borderClass = 'border-alert-critical';
+          neg++;
+        } else if (severity > 1) {
+          levelClass = 'text-alert-warning';
+          levelText = 'WARN';
+          borderClass = 'border-alert-warning';
+          neu++;
+        } else {
+          levelClass = 'text-alert-success';
+          levelText = 'INFO';
+          borderClass = 'border-alert-success';
+          pos++;
+        }
+
+        // Emoji detection
+        let emoji = '';
+        const textLower = p.text.toLowerCase();
+        if (textLower.includes('flood')) emoji = '🌊';
+        else if (textLower.includes('wildfire')) emoji = '🔥';
+        else if (textLower.includes('earthquake')) emoji = '🌍';
+        else if (textLower.includes('landslide')) emoji = '⛰️';
+        else if (textLower.includes('cyclone')) emoji = '🌀';
+        else if (textLower.includes('drought')) emoji = '☀️';
+
+        const time = new Date(p.timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }) + 'Z';
+
+        const div = document.createElement('div');
+        div.className = 'group border-b border-white/5 hover:bg-white/[0.02] cursor-pointer transition-colors animate-fadeIn';
+        div.style.animationDelay = `${idx * 50}ms`;
+        div.innerHTML = `
+            <div class="flex border-l-2 ${borderClass} p-3 gap-3">
+                <div class="flex flex-col gap-1 min-w-[50px]">
+                    <span class="text-[10px] font-mono text-white/40">${time}</span>
+                    <span class="text-[10px] font-bold ${levelClass}">${levelText}</span>
+                </div>
+                <div class="flex flex-col gap-0.5 flex-1">
+                    <p class="text-xs text-white/90 font-medium leading-snug">${emoji} ${p.text}</p>
+                    <p class="text-[10px] text-white/50">LAT: ${p.lat.toFixed(2)}, LONG: ${p.lon.toFixed(2)}</p>
+                </div>
+            </div>
+        `;
+        feedEl.appendChild(div);
+        scoreSum += severity * 20;
+      });
+
+      negCount.textContent = neg;
+      neuCount.textContent = neu;
+      posCount.textContent = pos;
+
+      const avgScore = posts.length ? Math.round(scoreSum / posts.length) : 0;
+      updateIndicator(avgScore);
+
+      // Update trend chart
+      const timeLabel = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+      trendChart.data.labels.push(timeLabel);
+      trendChart.data.datasets[0].data.push(avgScore);
+      if (trendChart.data.labels.length > 10) {
+        trendChart.data.labels.shift();
+        trendChart.data.datasets[0].data.shift();
+      }
+      trendChart.update();
+
+      // Update sentiment chart
+      sentChart.data.datasets[0].data = [neg, neu, pos];
+      sentChart.update();
+
+      // Update map markers
+      clearMarkers();
+      posts.forEach(p => {
+        const color = p.severity > 2 ? '#ef4444' : (p.severity > 1 ? '#eab308' : '#10b981');
+        let emoji = '';
+        const textLower = p.text.toLowerCase();
+        if (textLower.includes('flood')) emoji = '🌊';
+        else if (textLower.includes('wildfire')) emoji = '🔥';
+        else if (textLower.includes('earthquake')) emoji = '🌍';
+        else if (textLower.includes('landslide')) emoji = '⛰️';
+        else if (textLower.includes('cyclone')) emoji = '🌀';
+        else if (textLower.includes('drought')) emoji = '☀️';
+
+        const c = L.circleMarker([p.lat, p.lon], {
+          radius: 8,
+          fillColor: color,
+          color: '#000',
+          weight: 0.6,
+          fillOpacity: 0.95
+        }).addTo(map);
+
+        c.bindPopup(`<div style="font-family: monospace; font-size: 11px;"><b>${emoji} ${p.text}</b><br><span style="color: #888;">${new Date(p.timestamp).toLocaleString()}</span></div>`);
+        markers.push(c);
+      });
+
+      // Center map and update display
+      const r = document.getElementById('region').value;
+      const bounds = regionBounds[r.toLowerCase()] || regionBounds["any"];
+      sectorTitle.innerHTML = `SECTOR: ${bounds.name} <span id="statusBadge" class="px-2 py-0.5 bg-alert-warning/20 text-alert-warning text-[10px] font-bold tracking-wider rounded-sm border border-alert-warning/30">MONITORING</span>`;
+
+      if (posts.length > 0) {
+        map.setView(bounds.center, r === 'any' ? 2 : 4);
+        coordsDisplay.innerHTML = `<span class="material-symbols-outlined text-sm">my_location</span> LAT: ${bounds.center[0]}, LONG: ${bounds.center[1]}`;
+      }
+      updateTimer.innerHTML = `<span class="material-symbols-outlined text-sm">schedule</span> LAST UPDATE: ${new Date().toLocaleTimeString()}`;
+    }
+
+    // ==================== API ====================
+    async function analyzeWithAPI(posts = [], keyword = "flood", region = "any", real = false) {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ posts, keyword, region, real })
+      });
+      return await res.json();
+    }
+
+    // ==================== EVENT HANDLERS ====================
+    let autoTimer = null;
+
+    simulateBtn.addEventListener('click', async () => {
+      const k = document.getElementById('keyword').value || 'flood';
+      const r = document.getElementById('region').value || 'any';
+
+      const useReal = confirm("Fetch live posts from Reddit? (Requires backend API key).\n\nOK = Real data\nCancel = Demo simulation");
+
+      if (useReal) {
+        try {
+          simulateBtn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">sync</span> LOADING...';
+          const result = await analyzeWithAPI([], k, r, true);
+          console.log("Backend Response:", result);
+
+          if (result.error) {
+            alert("Error from server: " + result.error);
+            simulateBtn.innerHTML = '<span class="material-symbols-outlined text-sm">play_arrow</span> ANALYZE';
+            return;
+          }
+
+          const filteredPosts = filterPostsByRegionAndKeyword(result.posts, k, r);
+          console.log(`Filtered ${result.posts.length} posts to ${filteredPosts.length} relevant posts`);
+
+          if (filteredPosts.length === 0) {
+            alert(`No posts found matching "${k}" in the selected region. Try selecting "GLOBAL" or a different keyword.`);
+            simulateBtn.innerHTML = '<span class="material-symbols-outlined text-sm">play_arrow</span> ANALYZE';
+            return;
+          }
+
+          render(filteredPosts);
+          if (autoTimer) clearInterval(autoTimer);
+          simulateBtn.innerHTML = '<span class="material-symbols-outlined text-sm">play_arrow</span> ANALYZE';
+        } catch (err) {
+          alert("Failed to fetch or analyze real data. See console for details.");
+          console.error("Fetch Error:", err);
+          simulateBtn.innerHTML = '<span class="material-symbols-outlined text-sm">play_arrow</span> ANALYZE';
+        }
+      } else {
+        const posts = generateDemoPosts(12, k, r);
+        render(posts);
+        if (autoTimer) clearInterval(autoTimer);
+        autoTimer = setInterval(() => {
+          const posts2 = generateDemoPosts(8, k, r);
+          render(posts2);
+        }, 4000);
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      if (autoTimer) clearInterval(autoTimer);
+      updateIndicator(0);
+      negCount.textContent = neuCount.textContent = posCount.textContent = 0;
+      feedEl.innerHTML = `
+        <div class="p-6 text-center text-white/30 text-xs font-mono">
+            <span class="material-symbols-outlined text-3xl mb-2 block">signal_cellular_alt</span>
+            SELECT PARAMETERS AND CLICK ANALYZE TO BEGIN MONITORING
+        </div>
+    `;
+      clearMarkers();
+      trendChart.data.labels = [];
+      trendChart.data.datasets[0].data = [];
+      trendChart.update();
+      sentChart.data.datasets[0].data = [0, 0, 0];
+      sentChart.update();
+      sectorTitle.innerHTML = 'SECTOR: GLOBAL MONITORING <span id="statusBadge" class="px-2 py-0.5 bg-primary/20 text-primary text-[10px] font-bold tracking-wider rounded-sm border border-primary/30">STANDBY</span>';
+      coordsDisplay.innerHTML = '<span class="material-symbols-outlined text-sm">my_location</span> LAT: --, LONG: --';
+      updateTimer.innerHTML = '<span class="material-symbols-outlined text-sm">schedule</span> LAST UPDATE: --';
+    });
+
+    exportBtn.addEventListener('click', () => {
+      const posts = Array.from(feedEl.querySelectorAll('.group')).map(p => ({
+        text: p.querySelector('.text-white\\/90')?.innerText || '',
+        time: p.querySelector('.text-white\\/40')?.innerText || '',
+        coords: p.querySelector('.text-white\\/50')?.innerText || ''
+      }));
+
+      const blob = new Blob([JSON.stringify(posts, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'intelligence_report.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+
+    tipsBtn.addEventListener('click', () => {
+      alert('🎯 Training Tips:\n\n1) Label 2-5k Reddit posts across classes.\n2) Fine-tune DistilBERT for classification.\n3) Predict severity via a regression head.\n4) Use real-time streaming for production.');
+    });
+
+    generateReportBtn.addEventListener('click', () => {
+      const neg = negCount.textContent;
+      const neu = neuCount.textContent;
+      const pos = posCount.textContent;
+      const risk = alertEl.textContent;
+      const region = document.getElementById('region').value.toUpperCase();
+      const keyword = document.getElementById('keyword').value.toUpperCase();
+
+      alert(`📊 INTELLIGENCE REPORT\n\n` +
+        `Region: ${region}\n` +
+        `Issue: ${keyword}\n` +
+        `Risk Score: ${risk}\n\n` +
+        `Signal Breakdown:\n` +
+        `  • Critical: ${neg}\n` +
+        `  • Warning: ${neu}\n` +
+        `  • Info: ${pos}\n\n` +
+        `Timestamp: ${new Date().toISOString()}`);
+    });
+
+    // Theme toggle with map tile switching
+    const toggleBtn = document.getElementById('theme-toggle');
+    let darkTileLayer = null;
+    let lightTileLayer = null;
+
+    function setTheme(isDark) {
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        toggleBtn.innerHTML = '<span class="material-symbols-outlined text-xl">light_mode</span>';
+        // Switch to dark map tiles
+        if (lightTileLayer) map.removeLayer(lightTileLayer);
+        if (!darkTileLayer) {
+          darkTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 });
+        }
+        darkTileLayer.addTo(map);
+      } else {
+        document.documentElement.classList.remove('dark');
+        toggleBtn.innerHTML = '<span class="material-symbols-outlined text-xl">dark_mode</span>';
+        // Switch to light map tiles
+        if (darkTileLayer) map.removeLayer(darkTileLayer);
+        if (!lightTileLayer) {
+          lightTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 });
+        }
+        lightTileLayer.addTo(map);
+      }
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    }
+
+    toggleBtn.addEventListener('click', () => {
+      const isDark = !document.documentElement.classList.contains('dark');
+      setTheme(isDark);
+    });
+
+    // Initialize theme from localStorage or default to dark
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      setTheme(prefersDark);
+      updateIndicator(0);
+    });
+  </script>
+
+</body>
+
+</html>
